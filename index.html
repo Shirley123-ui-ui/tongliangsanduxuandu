@@ -1,0 +1,2335 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三维交互式物理概念学习：通量、散度、旋度</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a1931 0%, #185adb 50%, #1e3c72 100%);
+            color: #e0f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            max-width: 1400px;
+            width: 100%;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: rgba(15, 30, 60, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(64, 156, 255, 0.3);
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            background: linear-gradient(90deg, #00d4ff, #0088ff, #0044ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.3rem;
+            color: #90caf9;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        .scene-selector {
+            display: flex;
+            background: rgba(20, 40, 80, 0.7);
+            border-radius: 12px;
+            padding: 5px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+        
+        .scene-btn {
+            flex: 1;
+            max-width: 300px;
+            padding: 18px 20px;
+            background: transparent;
+            border-radius: 10px;
+            border: none;
+            color: #90caf9;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .scene-btn:hover {
+            background: rgba(0, 132, 255, 0.2);
+        }
+        
+        .scene-btn.active {
+            background: rgba(0, 132, 255, 0.4);
+            color: #e0f7fa;
+            box-shadow: 0 0 20px rgba(0, 132, 255, 0.5);
+        }
+        
+        .scene-container {
+            background: rgba(15, 30, 60, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(64, 156, 255, 0.3);
+            margin-bottom: 30px;
+            display: none;
+        }
+        
+        .scene-container.active {
+            display: block;
+        }
+        
+        .scene-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .scene-title {
+            font-size: 2rem;
+            color: #00d4ff;
+        }
+        
+        .scene-icon {
+            font-size: 2.5rem;
+        }
+        
+        .scene-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+        }
+        
+        .canvas-panel {
+            flex: 2;
+            min-width: 700px;
+            position: relative;
+        }
+        
+        .control-panel {
+            flex: 1;
+            min-width: 350px;
+            background: rgba(20, 40, 80, 0.7);
+            border-radius: 12px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        h2 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+            font-size: 1.6rem;
+            border-bottom: 2px solid rgba(0, 212, 255, 0.4);
+            padding-bottom: 8px;
+        }
+        
+        h3 {
+            color: #0088ff;
+            margin: 15px 0 10px 0;
+            font-size: 1.3rem;
+        }
+        
+        .slider-container {
+            margin: 15px 0;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #bbdefb;
+            font-weight: 600;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: linear-gradient(90deg, #1a2c5d, #2a3c6d);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #00d4ff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+        }
+        
+        .value-display {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: #00d4ff;
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        button {
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #2a3c6d, #1a2c5d);
+            color: #e0f7fa;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #0088ff, #0044ff);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 136, 255, 0.3);
+        }
+        
+        button.active {
+            background: linear-gradient(135deg, #0088ff, #0044ff);
+            box-shadow: 0 0 15px rgba(0, 136, 255, 0.5);
+        }
+        
+        .concept-explanation {
+            background: rgba(10, 30, 60, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            line-height: 1.6;
+            border-left: 4px solid #00d4ff;
+            font-size: 0.95rem;
+        }
+        
+        .concept-explanation p {
+            margin-bottom: 10px;
+            color: #bbdefb;
+        }
+        
+        .concept-explanation strong {
+            color: #00d4ff;
+        }
+        
+        .instructions {
+            background: rgba(20, 40, 80, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border: 1px solid rgba(0, 132, 255, 0.3);
+            font-size: 0.95rem;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+            margin-top: 8px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(64, 156, 255, 0.3);
+            color: #90caf9;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 500px;
+            background: #0a1429;
+            border-radius: 10px;
+            cursor: grab;
+            box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.6);
+        }
+        
+        canvas:active {
+            cursor: grabbing;
+        }
+        
+        .measurement-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(10, 20, 40, 0.85);
+            border-radius: 10px;
+            padding: 15px;
+            min-width: 200px;
+            border: 1px solid rgba(64, 156, 255, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        
+        .measurement-title {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #bbdefb;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+            padding-bottom: 5px;
+        }
+        
+        .measurement-value-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .measurement-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .measurement-label {
+            font-size: 0.95rem;
+            color: #90caf9;
+        }
+        
+        .measurement-value {
+            font-size: 1.2rem;
+            color: #00d4ff;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: right;
+        }
+        
+        .measurement-unit {
+            font-size: 0.8rem;
+            color: #90caf9;
+            text-align: right;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(10, 20, 40, 0.5);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+        
+        @media (max-width: 1200px) {
+            .scene-content {
+                flex-direction: column;
+            }
+            
+            .canvas-panel, .control-panel {
+                min-width: 100%;
+            }
+            
+            .measurement-display {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>三维交互式物理概念学习</h1>
+            <p class="subtitle">通过直观的3D模型理解通量、散度和旋度 | 拖拽、旋转、调节，亲身感受物理概念</p>
+        </header>
+        
+        <div class="scene-selector">
+            <button id="scene-flux" class="scene-btn active">
+                <div style="font-size: 1.5rem;">🌊</div>
+                <div>通量模型：渔网与水流量</div>
+            </button>
+            <button id="scene-divergence" class="scene-btn">
+                <div style="font-size: 1.5rem;">🚰</div>
+                <div>散度模型：水龙头与源/汇</div>
+            </button>
+            <button id="scene-curl" class="scene-btn">
+                <div style="font-size: 1.5rem;">🌀</div>
+                <div>旋度模型：水龙卷与漩涡</div>
+            </button>
+        </div>
+        
+        <!-- 通量场景 -->
+        <div id="flux-scene" class="scene-container active">
+            <div class="scene-header">
+                <div class="scene-title">通量模型：渔网与水流量</div>
+                <div class="scene-icon">🌊</div>
+            </div>
+            
+            <div class="scene-content">
+                <div class="canvas-panel">
+                    <h2>三维交互视图</h2>
+                    <canvas id="flux-canvas" width="800" height="500"></canvas>
+                    
+                    <div class="measurement-display">
+                        <div class="measurement-title">测量结果</div>
+                        <div class="measurement-value-container">
+                            <div class="measurement-row">
+                                <div class="measurement-label">通量值</div>
+                                <div class="measurement-value" id="flux-value">0.00</div>
+                            </div>
+                            <div class="measurement-unit" id="flux-unit">单位/秒</div>
+                            
+                            <div class="measurement-row">
+                                <div class="measurement-label">水流密度</div>
+                                <div class="measurement-value" id="flow-density-value">15</div>
+                            </div>
+                            <div class="measurement-unit">箭头数</div>
+                            
+                            <div class="measurement-row">
+                                <div class="measurement-label">渔网面积</div>
+                                <div class="measurement-value" id="net-area-value">16.00</div>
+                            </div>
+                            <div class="measurement-unit">平方米</div>
+                        </div>
+                    </div>
+                    
+                    <div class="instructions">
+                        <h3>交互指南</h3>
+                        <ul>
+                            <li><strong>旋转视图</strong>：按住鼠标左键拖拽可以旋转整个场景</li>
+                            <li><strong>调整水流</strong>：使用右侧控制面板调整水流方向和密度</li>
+                            <li><strong>调整渔网</strong>：控制渔网的方向和大小</li>
+                            <li><strong>观察通量</strong>：观察蓝色水流箭头穿过红色渔网的情况，通量值实时更新</li>
+                            <li><strong>通量规则</strong>：只有水流箭头正在穿过渔网时才会计入通量计算</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #2196f3;"></div>
+                            <span>水流方向</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #f44336;"></div>
+                            <span>渔网（测量曲面）</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #4caf50;"></div>
+                            <span>正通量（水流穿过渔网）</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #ff9800;"></div>
+                            <span>负通量（水流反向穿过）</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #ff4081;"></div>
+                            <span>穿过中的水流</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-panel">
+                    <h2>控制面板</h2>
+                    
+                    <h3>水流控制</h3>
+                    <div class="slider-container">
+                        <label for="flow-density">水流密度：<span id="flow-density-display">15</span></label>
+                        <input type="range" id="flow-density" min="1" max="50" step="1" value="15">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="flow-plane">水流平面高度：<span id="flow-plane-display">0.0</span></label>
+                        <input type="range" id="flow-plane" min="-3" max="3" step="0.1" value="0.0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="flow-direction-x">水流X方向：<span id="flow-direction-x-value">0.7</span></label>
+                        <input type="range" id="flow-direction-x" min="-1" max="1" step="0.1" value="0.7">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="flow-direction-y">水流Y方向：<span id="flow-direction-y-value">0.5</span></label>
+                        <input type="range" id="flow-direction-y" min="-1" max="1" step="0.1" value="0.5">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="flow-direction-z">水流Z方向：<span id="flow-direction-z-value">0.3</span></label>
+                        <input type="range" id="flow-direction-z" min="-1" max="1" step="0.1" value="0.3">
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button id="flow-horizontal">水平水流</button>
+                        <button id="flow-vertical">垂直水流</button>
+                        <button id="flow-diagonal">对角线水流</button>
+                    </div>
+                    
+                    <h3>渔网控制</h3>
+                    <div class="slider-container">
+                        <label for="net-size">渔网大小：<span id="net-size-value">4.0</span></label>
+                        <input type="range" id="net-size" min="2" max="8" step="0.1" value="4.0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="net-position">渔网位置：<span id="net-position-value">0.0</span></label>
+                        <input type="range" id="net-position" min="-3" max="3" step="0.1" value="0.0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="net-rotation-x">渔网X旋转：<span id="net-rotation-x-value">0</span>°</label>
+                        <input type="range" id="net-rotation-x" min="-90" max="90" step="1" value="0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="net-rotation-y">渔网Y旋转：<span id="net-rotation-y-value">0</span>°</label>
+                        <input type="range" id="net-rotation-y" min="-90" max="90" step="1" value="0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="net-rotation-z">渔网Z旋转：<span id="net-rotation-z-value">0</span>°</label>
+                        <input type="range" id="net-rotation-z" min="-180" max="180" step="1" value="0">
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button id="net-horizontal">水平渔网</button>
+                        <button id="net-vertical">垂直渔网</button>
+                        <button id="net-tilted">倾斜渔网</button>
+                        <button id="net-reset-angle">重置角度</button>
+                    </div>
+                    
+                    <div class="concept-explanation">
+                        <p><strong>通量（Flux）</strong>是矢量场穿过一个曲面的总量。</p>
+                        <p>在这个模型中：</p>
+                        <p>• <strong>蓝色箭头</strong>表示水流方向和密度</p>
+                        <p>• <strong>红色网格</strong>表示渔网（测量曲面）</p>
+                        <p>• <strong>粉色箭头</strong>表示正在穿过渔网的水流</p>
+                        <p>• <strong>通量值</strong>表示单位时间内穿过渔网的水量</p>
+                        <p>• 水流垂直穿过渔网时通量最大，平行时通量为零</p>
+                        <p>• <strong>只有正在穿过渔网的水流才会产生通量</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 散度场景 -->
+        <div id="divergence-scene" class="scene-container">
+            <div class="scene-header">
+                <div class="scene-title">散度模型：水龙头与源/汇</div>
+                <div class="scene-icon">🚰</div>
+            </div>
+            
+            <div class="scene-content">
+                <div class="canvas-panel">
+                    <h2>三维交互视图</h2>
+                    <canvas id="divergence-canvas" width="800" height="500"></canvas>
+                    
+                    <div class="measurement-display">
+                        <div class="measurement-title">测量结果</div>
+                        <div class="measurement-value-container">
+                            <div class="measurement-row">
+                                <div class="measurement-label">散度值</div>
+                                <div class="measurement-value" id="divergence-value">0.00</div>
+                            </div>
+                            <div class="measurement-unit" id="divergence-unit">单位/立方米</div>
+                            
+                            <div class="measurement-row">
+                                <div class="measurement-label">流出总量</div>
+                                <div class="measurement-value" id="outflow-value">0.00</div>
+                            </div>
+                            <div class="measurement-unit">单位/秒</div>
+                            
+                            <div class="measurement-row">
+                                <div class="measurement-label">立方体体积</div>
+                                <div class="measurement-value" id="cube-volume-value">8.00</div>
+                            </div>
+                            <div class="measurement-unit">立方米</div>
+                        </div>
+                    </div>
+                    
+                    <div class="instructions">
+                        <h3>交互指南</h3>
+                        <ul>
+                            <li><strong>旋转视图</strong>：按住鼠标左键拖拽可以旋转整个场景</li>
+                            <li><strong>调整水龙头</strong>：使用右侧控制面板调整水龙头是源（出水）还是汇（吸水）</li>
+                            <li><strong>调整强度</strong>：控制水龙头出水/吸水的强度</li>
+                            <li><strong>观察散度</strong>：观察水流从中心点发散（正散度）或向中心点汇聚（负散度）</li>
+                            <li><strong>可视化选项</strong>：使用下方按钮切换不同的可视化效果</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #2196f3;"></div>
+                            <span>水流方向</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #ff9800;"></div>
+                            <span>测量立方体</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #f44336;"></div>
+                            <span>正散度（源，出水）</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #4caf50;"></div>
+                            <span>负散度（汇，吸水）</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-panel">
+                    <h2>控制面板</h2>
+                    
+                    <h3>水龙头控制</h3>
+                    <div class="slider-container">
+                        <label for="faucet-strength">水龙头强度：<span id="faucet-strength-value">1.0</span></label>
+                        <input type="range" id="faucet-strength" min="0" max="3" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="faucet-direction">水龙头方向：<span id="faucet-direction-value">1.0</span></label>
+                        <input type="range" id="faucet-direction" min="-1" max="1" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button id="faucet-source" class="active">源（出水，正散度）</button>
+                        <button id="faucet-sink">汇（吸水，负散度）</button>
+                        <button id="faucet-off">关闭（零散度）</button>
+                    </div>
+                    
+                    <h3>测量立方体</h3>
+                    <div class="slider-container">
+                        <label for="cube-size">立方体大小：<span id="cube-size-value">2.0</span></label>
+                        <input type="range" id="cube-size" min="1" max="4" step="0.1" value="2.0">
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button id="cube-small">小立方体</button>
+                        <button id="cube-medium">中立方体</button>
+                        <button id="cube-large">大立方体</button>
+                    </div>
+                    
+                    <h3>可视化选项</h3>
+                    <div class="btn-group">
+                        <button id="show-vectors" class="active">显示水流箭头</button>
+                        <button id="show-cube" class="active">显示测量立方体</button>
+                        <button id="show-flowlines">显示流线</button>
+                    </div>
+                    
+                    <div class="concept-explanation">
+                        <p><strong>散度（Divergence）</strong>表示一个点是场的"源"还是"汇"。</p>
+                        <p>在这个模型中：</p>
+                        <p>• <strong>水龙头</strong>表示空间中的一个点</p>
+                        <p>• <strong>出水</strong>表示正散度（源）</p>
+                        <p>• <strong>吸水</strong>表示负散度（汇）</p>
+                        <p>• <strong>关闭</strong>表示零散度</p>
+                        <p>• 散度值表示单位体积内产生或消失的流量</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 旋度场景 -->
+        <div id="curl-scene" class="scene-container">
+            <div class="scene-header">
+                <div class="scene-title">旋度模型：水龙卷与漩涡</div>
+                <div class="scene-icon">🌀</div>
+            </div>
+            
+            <div class="scene-content">
+                <div class="canvas-panel">
+                    <h2>三维交互视图</h2>
+                    <canvas id="curl-canvas" width="800" height="500"></canvas>
+                    
+                    <div class="measurement-display">
+                        <div class="measurement-title">测量结果</div>
+                        <div class="measurement-value-container">
+                            <div class="measurement-row">
+                                <div class="measurement-label">旋度值</div>
+                                <div class="measurement-value" id="curl-value">0.00</div>
+                            </div>
+                            <div class="measurement-unit" id="curl-unit">单位/米</div>
+                            
+                            <div class="measurement-row">
+                                <div class="measurement-label">旋转速度</div>
+                                <div class="measurement-value" id="rotation-speed-value">0.00</div>
+                            </div>
+                            <div class="measurement-unit">转/秒</div>
+                            
+                            <div class="measurement-row">
+                                <div class="measurement-label">漩涡半径</div>
+                                <div class="measurement-value" id="vortex-radius-display">3.00</div>
+                            </div>
+                            <div class="measurement-unit">米</div>
+                        </div>
+                    </div>
+                    
+                    <div class="instructions">
+                        <h3>交互指南</h3>
+                        <ul>
+                            <li><strong>旋转视图</strong>：按住鼠标左键拖拽可以旋转整个场景</li>
+                            <li><strong>调整漩涡</strong>：使用右侧控制面板调整漩涡的大小、强度和方向</li>
+                            <li><strong>调整测量杆</strong>：控制测量杆（小风车）的大小和位置</li>
+                            <li><strong>观察旋度</strong>：观察小风车的旋转情况，旋度值表示旋转的强度和方向</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #2196f3;"></div>
+                            <span>水流方向</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #9c27b0;"></div>
+                            <span>漩涡中心</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #ff9800;"></div>
+                            <span>测量风车</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #4caf50;"></div>
+                            <span>正旋度（逆时针）</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #f44336;"></div>
+                            <span>负旋度（顺时针）</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-panel">
+                    <h2>控制面板</h2>
+                    
+                    <h3>漩涡控制</h3>
+                    <div class="slider-container">
+                        <label for="vortex-strength">漩涡强度：<span id="vortex-strength-value">1.0</span></label>
+                        <input type="range" id="vortex-strength" min="0" max="3" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="vortex-radius">漩涡半径：<span id="vortex-radius-value">3.0</span></label>
+                        <input type="range" id="vortex-radius" min="1" max="5" step="0.1" value="3.0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="vortex-direction">漩涡方向：<span id="vortex-direction-value">1.0</span></label>
+                        <input type="range" id="vortex-direction" min="-1" max="1" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button id="vortex-clockwise">顺时针漩涡</button>
+                        <button id="vortex-counterclockwise" class="active">逆时针漩涡</button>
+                        <button id="vortex-vertical">垂直漩涡</button>
+                    </div>
+                    
+                    <h3>测量风车</h3>
+                    <div class="slider-container">
+                        <label for="pinwheel-size">风车大小：<span id="pinwheel-size-value">1.0</span></label>
+                        <input type="range" id="pinwheel-size" min="0.5" max="2" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <label for="pinwheel-position">风车位置：<span id="pinwheel-position-value">0.0</span></label>
+                        <input type="range" id="pinwheel-position" min="-1.5" max="1.5" step="0.1" value="0.0">
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button id="pinwheel-center">中心位置</button>
+                        <button id="pinwheel-edge">边缘位置</button>
+                        <button id="pinwheel-outside">外部位置</button>
+                    </div>
+                    
+                    <div class="concept-explanation">
+                        <p><strong>旋度（Curl）</strong>表示场围绕一个点的旋转趋势。</p>
+                        <p>在这个模型中：</p>
+                        <p>• <strong>水龙卷</strong>表示一个有旋度的矢量场</p>
+                        <p>• <strong>小风车</strong>表示测量旋度的工具</p>
+                        <p>• <strong>顺时针/逆时针</strong>表示旋度的方向</p>
+                        <p>• <strong>旋度值</strong>表示旋转的强度和方向</p>
+                        <p>• 风车转得越快，旋度值越大</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>三维交互式物理概念学习工具 | 通过直观模型理解通量、散度与旋度</p>
+            <p style="margin-top: 10px; font-size: 0.85rem; color: #90caf9;">
+                提示：使用鼠标拖拽旋转三维视图，使用控制面板调节参数，观察物理量的变化
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ================ 通用3D渲染函数 ================
+        
+        // 3D点类
+        class Point3D {
+            constructor(x, y, z) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
+            
+            rotateX(angle) {
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                const y = this.y * cos - this.z * sin;
+                const z = this.y * sin + this.z * cos;
+                return new Point3D(this.x, y, z);
+            }
+            
+            rotateY(angle) {
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                const x = this.x * cos + this.z * sin;
+                const z = -this.x * sin + this.z * cos;
+                return new Point3D(x, this.y, z);
+            }
+            
+            rotateZ(angle) {
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                const x = this.x * cos - this.y * sin;
+                const y = this.x * sin + this.y * cos;
+                return new Point3D(x, y, this.z);
+            }
+            
+            project(canvasWidth, canvasHeight, fov = 800) {
+                const scale = fov / (fov + this.z);
+                const x = this.x * scale + canvasWidth / 2;
+                const y = -this.y * scale + canvasHeight / 2;
+                return { x, y, scale };
+            }
+        }
+        
+        // 3D向量类
+        class Vector3D {
+            constructor(x, y, z) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
+            
+            length() {
+                return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+            }
+            
+            normalize() {
+                const len = this.length();
+                if (len === 0) return new Vector3D(0, 0, 0);
+                return new Vector3D(this.x / len, this.y / len, this.z / len);
+            }
+            
+            dot(v) {
+                return this.x * v.x + this.y * v.y + this.z * v.z;
+            }
+            
+            cross(v) {
+                return new Vector3D(
+                    this.y * v.z - this.z * v.y,
+                    this.z * v.x - this.x * v.z,
+                    this.x * v.y - this.y * v.x
+                );
+            }
+            
+            scale(s) {
+                return new Vector3D(this.x * s, this.y * s, this.z * s);
+            }
+        }
+        
+        // 3D场景管理器
+        class Scene3D {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                
+                // 3D场景参数
+                this.camera = {
+                    x: 0,
+                    y: 0,
+                    z: -10,
+                    rotationX: -Math.PI / 6,
+                    rotationY: Math.PI / 4,
+                    rotationZ: 0
+                };
+                
+                // 场景缩放因子
+                this.scaleFactor = 30;
+                
+                // 鼠标交互
+                this.isDragging = false;
+                this.lastMouseX = 0;
+                this.lastMouseY = 0;
+                
+                // 初始化
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                // 鼠标按下开始拖拽
+                this.canvas.addEventListener('mousedown', (e) => {
+                    this.isDragging = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                });
+                
+                // 鼠标移动旋转场景
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (!this.isDragging) return;
+                    
+                    const deltaX = e.clientX - this.lastMouseX;
+                    const deltaY = e.clientY - this.lastMouseY;
+                    
+                    this.camera.rotationY += deltaX * 0.01;
+                    this.camera.rotationX += deltaY * 0.01;
+                    
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                    
+                    // 触发重绘
+                    if (this.onRender) this.onRender();
+                });
+                
+                // 鼠标松开停止拖拽
+                this.canvas.addEventListener('mouseup', () => {
+                    this.isDragging = false;
+                });
+                
+                this.canvas.addEventListener('mouseleave', () => {
+                    this.isDragging = false;
+                });
+                
+                // 鼠标滚轮缩放
+                this.canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                    this.scaleFactor *= zoomFactor;
+                    this.scaleFactor = Math.max(10, Math.min(100, this.scaleFactor));
+                    if (this.onRender) this.onRender();
+                });
+            }
+            
+            // 设置渲染回调
+            setRenderCallback(callback) {
+                this.onRender = callback;
+            }
+            
+            // 清除画布
+            clear() {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                
+                // 绘制渐变背景
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
+                gradient.addColorStop(0, '#0a1429');
+                gradient.addColorStop(1, '#1a2439');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.width, this.height);
+            }
+            
+            // 将3D点转换为2D屏幕坐标（考虑缩放）
+            projectPoint(point3D) {
+                // 应用缩放
+                let point = new Point3D(
+                    point3D.x * this.scaleFactor,
+                    point3D.y * this.scaleFactor,
+                    point3D.z * this.scaleFactor
+                );
+                
+                // 应用相机旋转
+                point = point.rotateY(this.camera.rotationY);
+                point = point.rotateX(this.camera.rotationX);
+                point = point.rotateZ(this.camera.rotationZ);
+                
+                // 应用相机平移
+                point.x += this.camera.x;
+                point.y += this.camera.y;
+                point.z += this.camera.z;
+                
+                // 投影到2D
+                return point.project(this.width, this.height);
+            }
+            
+            // 绘制3D线段
+            drawLine(p1, p2, color = '#ffffff', width = 1) {
+                const proj1 = this.projectPoint(p1);
+                const proj2 = this.projectPoint(p2);
+                
+                // 检查点是否在视野内（z>0才可见）
+                if (proj1.scale <= 0 || proj2.scale <= 0) return;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(proj1.x, proj1.y);
+                this.ctx.lineTo(proj2.x, proj2.y);
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = width;
+                this.ctx.stroke();
+            }
+            
+            // 绘制3D箭头
+            drawArrow(start, end, color = '#ffffff', width = 2, headSize = 10) {
+                const projStart = this.projectPoint(start);
+                const projEnd = this.projectPoint(end);
+                
+                // 检查点是否在视野内
+                if (projStart.scale <= 0 || projEnd.scale <= 0) return;
+                
+                // 绘制箭杆
+                this.ctx.beginPath();
+                this.ctx.moveTo(projStart.x, projStart.y);
+                this.ctx.lineTo(projEnd.x, projEnd.y);
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = width;
+                this.ctx.stroke();
+                
+                // 计算箭头方向
+                const dx = projEnd.x - projStart.x;
+                const dy = projEnd.y - projStart.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                
+                if (length < 2) return;
+                
+                const angle = Math.atan2(dy, dx);
+                
+                // 绘制箭头
+                this.ctx.save();
+                this.ctx.translate(projEnd.x, projEnd.y);
+                this.ctx.rotate(angle);
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, 0);
+                this.ctx.lineTo(-headSize, -headSize/2);
+                this.ctx.lineTo(-headSize, headSize/2);
+                this.ctx.closePath();
+                
+                this.ctx.fillStyle = color;
+                this.ctx.fill();
+                
+                this.ctx.restore();
+            }
+            
+            // 绘制3D网格
+            drawGrid(size = 10, spacing = 2, color = 'rgba(100, 181, 246, 0.3)') {
+                for (let i = -size; i <= size; i++) {
+                    // X方向线
+                    this.drawLine(
+                        new Point3D(i * spacing, -size * spacing, 0),
+                        new Point3D(i * spacing, size * spacing, 0),
+                        color,
+                        0.5
+                    );
+                    
+                    // Y方向线
+                    this.drawLine(
+                        new Point3D(-size * spacing, i * spacing, 0),
+                        new Point3D(size * spacing, i * spacing, 0),
+                        color,
+                        0.5
+                    );
+                }
+            }
+            
+            // 绘制坐标轴
+            drawAxes(length = 5) {
+                const origin = new Point3D(0, 0, 0);
+                const xEnd = new Point3D(length, 0, 0);
+                const yEnd = new Point3D(0, length, 0);
+                const zEnd = new Point3D(0, 0, length);
+                
+                this.drawArrow(origin, xEnd, '#f44336', 3, 12);
+                this.drawArrow(origin, yEnd, '#4caf50', 3, 12);
+                this.drawArrow(origin, zEnd, '#2196f3', 3, 12);
+                
+                // 绘制标签
+                const projX = this.projectPoint(new Point3D(length + 0.5, 0, 0));
+                const projY = this.projectPoint(new Point3D(0, length + 0.5, 0));
+                const projZ = this.projectPoint(new Point3D(0, 0, length + 0.5));
+                
+                if (projX.scale > 0) {
+                    this.ctx.fillStyle = '#f44336';
+                    this.ctx.font = 'bold 16px Arial';
+                    this.ctx.fillText('X', projX.x, projX.y);
+                }
+                
+                if (projY.scale > 0) {
+                    this.ctx.fillStyle = '#4caf50';
+                    this.ctx.font = 'bold 16px Arial';
+                    this.ctx.fillText('Y', projY.x, projY.y);
+                }
+                
+                if (projZ.scale > 0) {
+                    this.ctx.fillStyle = '#2196f3';
+                    this.ctx.font = 'bold 16px Arial';
+                    this.ctx.fillText('Z', projZ.x, projZ.y);
+                }
+            }
+        }
+        
+        // ================ 通量场景 ================
+        
+        class FluxScene {
+            constructor() {
+                this.scene = new Scene3D('flux-canvas');
+                this.flowDirection = new Vector3D(0.7, 0.5, 0.3);
+                this.flowDensity = 15; // 水流密度（箭头数量）
+                this.flowPlane = 0.0; // 水流平面高度
+                this.netSize = 4.0;
+                this.netPosition = 0.0; // 渔网位置
+                this.netRotation = 0; // 渔网旋转角度（绕Z轴）
+                this.netRotationX = 0; // 渔网绕X轴旋转角度
+                this.netRotationY = 0; // 渔网绕Y轴旋转角度
+                
+                // 存储箭头状态：是否正在穿过渔网
+                this.arrowStates = [];
+                
+                // 预生成固定位置，避免闪烁
+                this.fixedPositions = this.generateFixedPositions(100);
+                
+                // 设置渲染回调
+                this.scene.setRenderCallback(() => this.render());
+                
+                // 初始渲染
+                this.render();
+                
+                // 设置控制事件
+                this.setupControls();
+            }
+            
+            generateFixedPositions(count) {
+                const positions = [];
+                const gridSize = 10;
+                const step = gridSize / Math.sqrt(count);
+                
+                for (let i = 0; i < count; i++) {
+                    const x = (i % 10) * step - gridSize/2;
+                    const y = Math.floor(i / 10) * step - gridSize/2;
+                    positions.push(new Point3D(x, y, 0));
+                }
+                
+                return positions;
+            }
+            
+            setupControls() {
+                // 水流密度
+                document.getElementById('flow-density').addEventListener('input', (e) => {
+                    this.flowDensity = parseInt(e.target.value);
+                    document.getElementById('flow-density-display').textContent = this.flowDensity;
+                    document.getElementById('flow-density-value').textContent = this.flowDensity;
+                    this.render();
+                });
+                
+                // 水流平面高度
+                document.getElementById('flow-plane').addEventListener('input', (e) => {
+                    this.flowPlane = parseFloat(e.target.value);
+                    document.getElementById('flow-plane-display').textContent = this.flowPlane.toFixed(1);
+                    this.render();
+                });
+                
+                // 水流方向
+                document.getElementById('flow-direction-x').addEventListener('input', (e) => {
+                    this.flowDirection.x = parseFloat(e.target.value);
+                    document.getElementById('flow-direction-x-value').textContent = this.flowDirection.x.toFixed(1);
+                    this.render();
+                });
+                
+                document.getElementById('flow-direction-y').addEventListener('input', (e) => {
+                    this.flowDirection.y = parseFloat(e.target.value);
+                    document.getElementById('flow-direction-y-value').textContent = this.flowDirection.y.toFixed(1);
+                    this.render();
+                });
+                
+                document.getElementById('flow-direction-z').addEventListener('input', (e) => {
+                    this.flowDirection.z = parseFloat(e.target.value);
+                    document.getElementById('flow-direction-z-value').textContent = this.flowDirection.z.toFixed(1);
+                    this.render();
+                });
+                
+                // 预设水流方向
+                document.getElementById('flow-horizontal').addEventListener('click', () => {
+                    this.flowDirection = new Vector3D(1, 0, 0);
+                    this.updateDirectionSliders();
+                    this.render();
+                });
+                
+                document.getElementById('flow-vertical').addEventListener('click', () => {
+                    this.flowDirection = new Vector3D(0, 1, 0);
+                    this.updateDirectionSliders();
+                    this.render();
+                });
+                
+                document.getElementById('flow-diagonal').addEventListener('click', () => {
+                    this.flowDirection = new Vector3D(0.7, 0.5, 0.3);
+                    this.updateDirectionSliders();
+                    this.render();
+                });
+                
+                // 渔网大小
+                document.getElementById('net-size').addEventListener('input', (e) => {
+                    this.netSize = parseFloat(e.target.value);
+                    document.getElementById('net-size-value').textContent = this.netSize.toFixed(1);
+                    document.getElementById('net-area-value').textContent = (this.netSize * this.netSize).toFixed(2);
+                    this.render();
+                });
+                
+                // 渔网位置
+                document.getElementById('net-position').addEventListener('input', (e) => {
+                    this.netPosition = parseFloat(e.target.value);
+                    document.getElementById('net-position-value').textContent = this.netPosition.toFixed(1);
+                    this.render();
+                });
+                
+                // 渔网绕Z轴旋转
+                document.getElementById('net-rotation-z').addEventListener('input', (e) => {
+                    this.netRotation = parseInt(e.target.value);
+                    document.getElementById('net-rotation-z-value').textContent = this.netRotation;
+                    this.render();
+                });
+                
+                // 渔网绕X轴旋转
+                document.getElementById('net-rotation-x').addEventListener('input', (e) => {
+                    this.netRotationX = parseInt(e.target.value);
+                    document.getElementById('net-rotation-x-value').textContent = this.netRotationX;
+                    this.render();
+                });
+                
+                // 渔网绕Y轴旋转
+                document.getElementById('net-rotation-y').addEventListener('input', (e) => {
+                    this.netRotationY = parseInt(e.target.value);
+                    document.getElementById('net-rotation-y-value').textContent = this.netRotationY;
+                    this.render();
+                });
+                
+                // 预设渔网方向
+                document.getElementById('net-horizontal').addEventListener('click', () => {
+                    this.netRotation = 0;
+                    this.netRotationX = 0;
+                    this.netRotationY = 0;
+                    document.getElementById('net-rotation-z').value = 0;
+                    document.getElementById('net-rotation-z-value').textContent = '0';
+                    document.getElementById('net-rotation-x').value = 0;
+                    document.getElementById('net-rotation-x-value').textContent = '0';
+                    document.getElementById('net-rotation-y').value = 0;
+                    document.getElementById('net-rotation-y-value').textContent = '0';
+                    this.render();
+                });
+                
+                document.getElementById('net-vertical').addEventListener('click', () => {
+                    this.netRotation = 90;
+                    this.netRotationX = 90;
+                    this.netRotationY = 0;
+                    document.getElementById('net-rotation-z').value = 90;
+                    document.getElementById('net-rotation-z-value').textContent = '90';
+                    document.getElementById('net-rotation-x').value = 90;
+                    document.getElementById('net-rotation-x-value').textContent = '90';
+                    document.getElementById('net-rotation-y').value = 0;
+                    document.getElementById('net-rotation-y-value').textContent = '0';
+                    this.render();
+                });
+                
+                document.getElementById('net-tilted').addEventListener('click', () => {
+                    this.netRotation = 45;
+                    this.netRotationX = 45;
+                    this.netRotationY = 45;
+                    document.getElementById('net-rotation-z').value = 45;
+                    document.getElementById('net-rotation-z-value').textContent = '45';
+                    document.getElementById('net-rotation-x').value = 45;
+                    document.getElementById('net-rotation-x-value').textContent = '45';
+                    document.getElementById('net-rotation-y').value = 45;
+                    document.getElementById('net-rotation-y-value').textContent = '45';
+                    this.render();
+                });
+                
+                document.getElementById('net-reset-angle').addEventListener('click', () => {
+                    this.netRotation = 0;
+                    this.netRotationX = 0;
+                    this.netRotationY = 0;
+                    document.getElementById('net-rotation-z').value = 0;
+                    document.getElementById('net-rotation-z-value').textContent = '0';
+                    document.getElementById('net-rotation-x').value = 0;
+                    document.getElementById('net-rotation-x-value').textContent = '0';
+                    document.getElementById('net-rotation-y').value = 0;
+                    document.getElementById('net-rotation-y-value').textContent = '0';
+                    this.render();
+                });
+            }
+            
+            updateDirectionSliders() {
+                document.getElementById('flow-direction-x').value = this.flowDirection.x;
+                document.getElementById('flow-direction-x-value').textContent = this.flowDirection.x.toFixed(1);
+                document.getElementById('flow-direction-y').value = this.flowDirection.y;
+                document.getElementById('flow-direction-y-value').textContent = this.flowDirection.y.toFixed(1);
+                document.getElementById('flow-direction-z').value = this.flowDirection.z;
+                document.getElementById('flow-direction-z-value').textContent = this.flowDirection.z.toFixed(1);
+            }
+            
+            render() {
+                this.scene.clear();
+                this.scene.drawGrid(8, 3);
+                this.scene.drawAxes();
+                
+                // 绘制渔网（测量曲面）
+                this.drawNet();
+                
+                // 绘制水流
+                this.drawFlow();
+                
+                // 计算并显示通量
+                this.calculateAndDisplayFlux();
+            }
+            
+            drawNet() {
+                const size = this.netSize;
+                const rotationZ = this.netRotation * Math.PI / 180;
+                const rotationX = this.netRotationX * Math.PI / 180;
+                const rotationY = this.netRotationY * Math.PI / 180;
+                const position = this.netPosition;
+                
+                // 创建渔网的四个角点
+                const corners = [
+                    new Point3D(-size/2, -size/2, position),
+                    new Point3D(size/2, -size/2, position),
+                    new Point3D(size/2, size/2, position),
+                    new Point3D(-size/2, size/2, position)
+                ];
+                
+                // 应用旋转（绕Z轴、X轴、Y轴）
+                const rotatedCorners = corners.map(p => {
+                    let rotated = p;
+                    rotated = rotated.rotateZ(rotationZ);
+                    rotated = rotated.rotateX(rotationX);
+                    rotated = rotated.rotateY(rotationY);
+                    return rotated;
+                });
+                
+                // 绘制渔网边框
+                for (let i = 0; i < 4; i++) {
+                    this.scene.drawLine(
+                        rotatedCorners[i],
+                        rotatedCorners[(i+1)%4],
+                        '#f44336',
+                        3
+                    );
+                }
+                
+                // 绘制渔网网格线
+                const gridLines = Math.max(8, Math.min(16, Math.floor(size)));
+                for (let i = 1; i < gridLines; i++) {
+                    // 水平线
+                    const t = i / gridLines;
+                    const p1 = new Point3D(
+                        -size/2 + size * t,
+                        -size/2,
+                        position
+                    );
+                    const p2 = new Point3D(
+                        -size/2 + size * t,
+                        size/2,
+                        position
+                    );
+                    
+                    const rp1 = p1.rotateZ(rotationZ).rotateX(rotationX).rotateY(rotationY);
+                    const rp2 = p2.rotateZ(rotationZ).rotateX(rotationX).rotateY(rotationY);
+                    
+                    this.scene.drawLine(rp1, rp2, 'rgba(244, 67, 54, 0.6)', 1);
+                    
+                    // 垂直线
+                    const p3 = new Point3D(
+                        -size/2,
+                        -size/2 + size * t,
+                        position
+                    );
+                    const p4 = new Point3D(
+                        size/2,
+                        -size/2 + size * t,
+                        position
+                    );
+                    
+                    const rp3 = p3.rotateZ(rotationZ).rotateX(rotationX).rotateY(rotationY);
+                    const rp4 = p4.rotateZ(rotationZ).rotateX(rotationX).rotateY(rotationY);
+                    
+                    this.scene.drawLine(rp3, rp4, 'rgba(244, 67, 54, 0.6)', 1);
+                }
+            }
+            
+            drawFlow() {
+                // 归一化水流方向
+                const normDirection = this.flowDirection.normalize();
+                
+                // 根据密度选择固定位置的一部分
+                const numArrows = Math.min(this.flowDensity, this.fixedPositions.length);
+                
+                // 重置箭头状态
+                this.arrowStates = [];
+                
+                // 计算渔网法向量
+                const netNormal = this.calculateNetNormal();
+                
+                for (let i = 0; i < numArrows; i++) {
+                    const pos = new Point3D(
+                        this.fixedPositions[i].x,
+                        this.fixedPositions[i].y,
+                        this.flowPlane
+                    );
+                    
+                    // 箭头长度固定
+                    const arrowLength = 1.5;
+                    const end = new Point3D(
+                        pos.x + normDirection.x * arrowLength,
+                        pos.y + normDirection.y * arrowLength,
+                        pos.z + normDirection.z * arrowLength
+                    );
+                    
+                    // 检查箭头是否正在穿过渔网
+                    const isPassingThrough = this.isArrowPassingThroughNet(pos, end, netNormal);
+                    
+                    // 存储箭头状态
+                    this.arrowStates.push({
+                        start: pos,
+                        end: end,
+                        isPassingThrough: isPassingThrough
+                    });
+                    
+                    // 根据是否穿过选择颜色
+                    const color = isPassingThrough ? '#ff4081' : '#2196f3';
+                    
+                    this.scene.drawArrow(pos, end, color, 2, 8);
+                }
+            }
+            
+            // 计算渔网法向量
+            calculateNetNormal() {
+                // 初始法向量为(0,0,1)（垂直于XY平面）
+                let normal = new Vector3D(0, 0, 1);
+                
+                // 应用旋转（绕Z轴、X轴、Y轴）
+                const rotationZ = this.netRotation * Math.PI / 180;
+                const rotationX = this.netRotationX * Math.PI / 180;
+                const rotationY = this.netRotationY * Math.PI / 180;
+                
+                // 应用旋转顺序：Z轴 -> X轴 -> Y轴
+                let rotatedNormal = normal;
+                
+                // 绕Z轴旋转
+                const cosZ = Math.cos(rotationZ);
+                const sinZ = Math.sin(rotationZ);
+                rotatedNormal = new Vector3D(
+                    rotatedNormal.x * cosZ - rotatedNormal.y * sinZ,
+                    rotatedNormal.x * sinZ + rotatedNormal.y * cosZ,
+                    rotatedNormal.z
+                );
+                
+                // 绕X轴旋转
+                const cosX = Math.cos(rotationX);
+                const sinX = Math.sin(rotationX);
+                rotatedNormal = new Vector3D(
+                    rotatedNormal.x,
+                    rotatedNormal.y * cosX - rotatedNormal.z * sinX,
+                    rotatedNormal.y * sinX + rotatedNormal.z * cosX
+                );
+                
+                // 绕Y轴旋转
+                const cosY = Math.cos(rotationY);
+                const sinY = Math.sin(rotationY);
+                rotatedNormal = new Vector3D(
+                    rotatedNormal.x * cosY + rotatedNormal.z * sinY,
+                    rotatedNormal.y,
+                    -rotatedNormal.x * sinY + rotatedNormal.z * cosY
+                );
+                
+                return rotatedNormal.normalize();
+            }
+            
+            // 检查箭头是否正在穿过渔网
+            isArrowPassingThroughNet(start, end, netNormal) {
+                // 渔网中心点
+                const netCenter = new Point3D(0, 0, this.netPosition);
+                
+                // 检查箭头与渔网平面的交点
+                const intersection = this.linePlaneIntersection(start, end, netCenter, netNormal);
+                
+                if (!intersection) {
+                    return false; // 没有交点
+                }
+                
+                // 检查交点是否在线段上
+                const t = intersection.t;
+                if (t < 0 || t > 1) {
+                    return false; // 交点不在线段上
+                }
+                
+                // 检查交点是否在渔网内部
+                const intersectionPoint = intersection.point;
+                return this.isPointInsideNet(intersectionPoint);
+            }
+            
+            // 计算线段与平面的交点
+            linePlaneIntersection(start, end, planePoint, planeNormal) {
+                const lineDirection = new Vector3D(
+                    end.x - start.x,
+                    end.y - start.y,
+                    end.z - start.z
+                );
+                
+                const denom = planeNormal.dot(lineDirection);
+                
+                // 如果线段与平面平行
+                if (Math.abs(denom) < 0.0001) {
+                    return null;
+                }
+                
+                const planeToStart = new Vector3D(
+                    planePoint.x - start.x,
+                    planePoint.y - start.y,
+                    planePoint.z - start.z
+                );
+                
+                const t = planeNormal.dot(planeToStart) / denom;
+                
+                // 计算交点
+                const intersectionPoint = new Point3D(
+                    start.x + lineDirection.x * t,
+                    start.y + lineDirection.y * t,
+                    start.z + lineDirection.z * t
+                );
+                
+                return { point: intersectionPoint, t: t };
+            }
+            
+            // 检查点是否在渔网内部
+            isPointInsideNet(point) {
+                // 将点转换到渔网局部坐标系
+                const rotationZ = -this.netRotation * Math.PI / 180;
+                const rotationX = -this.netRotationX * Math.PI / 180;
+                const rotationY = -this.netRotationY * Math.PI / 180;
+                
+                // 先减去渔网位置
+                const translatedPoint = new Point3D(
+                    point.x,
+                    point.y,
+                    point.z - this.netPosition
+                );
+                
+                // 反向旋转
+                let rotatedPoint = translatedPoint;
+                rotatedPoint = rotatedPoint.rotateY(rotationY);
+                rotatedPoint = rotatedPoint.rotateX(rotationX);
+                rotatedPoint = rotatedPoint.rotateZ(rotationZ);
+                
+                // 检查是否在渔网范围内
+                const halfSize = this.netSize / 2;
+                return Math.abs(rotatedPoint.x) <= halfSize && 
+                       Math.abs(rotatedPoint.y) <= halfSize &&
+                       Math.abs(rotatedPoint.z) <= 0.1; // 允许一定的厚度误差
+            }
+            
+            calculateAndDisplayFlux() {
+                // 计算正在穿过渔网的箭头数量
+                let passingArrowsCount = 0;
+                for (const arrow of this.arrowStates) {
+                    if (arrow.isPassingThrough) {
+                        passingArrowsCount++;
+                    }
+                }
+                
+                // 如果没有箭头穿过渔网，通量为0
+                if (passingArrowsCount === 0) {
+                    const fluxValueElement = document.getElementById('flux-value');
+                    fluxValueElement.textContent = '0.00';
+                    fluxValueElement.style.color = '#00d4ff';
+                    document.getElementById('flux-unit').textContent = '单位/秒 (无流量穿过)';
+                    return;
+                }
+                
+                // 计算通量：水流矢量在渔网法向量上的投影 × 渔网面积 × 密度因子
+                // 每个箭头代表单位流量，所以总流量与密度成正比
+                const densityFactor = this.flowDensity / 15; // 以15为基准
+                const flowPerArrow = 1.0; // 每个箭头代表的流量
+                const totalFlow = densityFactor * flowPerArrow;
+                
+                // 计算水流矢量
+                const normDirection = this.flowDirection.normalize();
+                const flowVector = normDirection.scale(totalFlow);
+                
+                // 计算渔网法向量
+                const netNormal = this.calculateNetNormal();
+                
+                // 计算通量
+                const flux = flowVector.dot(netNormal) * (this.netSize * this.netSize);
+                
+                // 更新显示
+                const fluxValueElement = document.getElementById('flux-value');
+                fluxValueElement.textContent = Math.abs(flux).toFixed(2);
+                
+                // 根据通量正负设置颜色和单位
+                const fluxUnitElement = document.getElementById('flux-unit');
+                if (flux > 0.01) {
+                    fluxValueElement.style.color = '#4caf50';
+                    fluxUnitElement.textContent = '单位/秒 (流出)';
+                } else if (flux < -0.01) {
+                    fluxValueElement.style.color = '#ff9800';
+                    fluxUnitElement.textContent = '单位/秒 (流入)';
+                } else {
+                    fluxValueElement.style.color = '#00d4ff';
+                    fluxUnitElement.textContent = '单位/秒 (平衡)';
+                }
+            }
+        }
+        
+        // ================ 散度场景 ================
+        
+        class DivergenceScene {
+            constructor() {
+                this.scene = new Scene3D('divergence-canvas');
+                this.faucetStrength = 1.0;
+                this.faucetDirection = 1.0; // 1: 源（出水），-1: 汇（吸水）
+                this.cubeSize = 2.0;
+                
+                // 可视化选项
+                this.showVectors = true;
+                this.showCube = true;
+                this.showFlowlines = false;
+                
+                // 设置渲染回调
+                this.scene.setRenderCallback(() => this.render());
+                
+                // 初始渲染
+                this.render();
+                
+                // 设置控制事件
+                this.setupControls();
+            }
+            
+            setupControls() {
+                // 水龙头强度
+                document.getElementById('faucet-strength').addEventListener('input', (e) => {
+                    this.faucetStrength = parseFloat(e.target.value);
+                    document.getElementById('faucet-strength-value').textContent = this.faucetStrength.toFixed(1);
+                    this.render();
+                });
+                
+                // 水龙头方向
+                document.getElementById('faucet-direction').addEventListener('input', (e) => {
+                    this.faucetDirection = parseFloat(e.target.value);
+                    document.getElementById('faucet-direction-value').textContent = this.faucetDirection.toFixed(1);
+                    this.updateFaucetButtons();
+                    this.render();
+                });
+                
+                // 水龙头预设
+                document.getElementById('faucet-source').addEventListener('click', () => {
+                    this.faucetDirection = 1.0;
+                    document.getElementById('faucet-direction').value = 1.0;
+                    document.getElementById('faucet-direction-value').textContent = '1.0';
+                    this.updateFaucetButtons();
+                    this.render();
+                });
+                
+                document.getElementById('faucet-sink').addEventListener('click', () => {
+                    this.faucetDirection = -1.0;
+                    document.getElementById('faucet-direction').value = -1.0;
+                    document.getElementById('faucet-direction-value').textContent = '-1.0';
+                    this.updateFaucetButtons();
+                    this.render();
+                });
+                
+                document.getElementById('faucet-off').addEventListener('click', () => {
+                    this.faucetDirection = 0;
+                    document.getElementById('faucet-direction').value = 0;
+                    document.getElementById('faucet-direction-value').textContent = '0.0';
+                    this.updateFaucetButtons();
+                    this.render();
+                });
+                
+                // 立方体大小
+                document.getElementById('cube-size').addEventListener('input', (e) => {
+                    this.cubeSize = parseFloat(e.target.value);
+                    document.getElementById('cube-size-value').textContent = this.cubeSize.toFixed(1);
+                    document.getElementById('cube-volume-value').textContent = (this.cubeSize * this.cubeSize * this.cubeSize).toFixed(2);
+                    this.render();
+                });
+                
+                // 立方体预设
+                document.getElementById('cube-small').addEventListener('click', () => {
+                    this.cubeSize = 1.0;
+                    document.getElementById('cube-size').value = 1.0;
+                    document.getElementById('cube-size-value').textContent = '1.0';
+                    document.getElementById('cube-volume-value').textContent = '1.00';
+                    this.render();
+                });
+                
+                document.getElementById('cube-medium').addEventListener('click', () => {
+                    this.cubeSize = 2.0;
+                    document.getElementById('cube-size').value = 2.0;
+                    document.getElementById('cube-size-value').textContent = '2.0';
+                    document.getElementById('cube-volume-value').textContent = '8.00';
+                    this.render();
+                });
+                
+                document.getElementById('cube-large').addEventListener('click', () => {
+                    this.cubeSize = 3.0;
+                    document.getElementById('cube-size').value = 3.0;
+                    document.getElementById('cube-size-value').textContent = '3.0';
+                    document.getElementById('cube-volume-value').textContent = '27.00';
+                    this.render();
+                });
+                
+                // 可视化选项
+                document.getElementById('show-vectors').addEventListener('click', () => {
+                    this.showVectors = !this.showVectors;
+                    this.updateVisualizationButtons();
+                    this.render();
+                });
+                
+                document.getElementById('show-cube').addEventListener('click', () => {
+                    this.showCube = !this.showCube;
+                    this.updateVisualizationButtons();
+                    this.render();
+                });
+                
+                document.getElementById('show-flowlines').addEventListener('click', () => {
+                    this.showFlowlines = !this.showFlowlines;
+                    this.updateVisualizationButtons();
+                    this.render();
+                });
+                
+                // 初始化按钮状态
+                this.updateVisualizationButtons();
+            }
+            
+            updateFaucetButtons() {
+                document.getElementById('faucet-source').classList.remove('active');
+                document.getElementById('faucet-sink').classList.remove('active');
+                document.getElementById('faucet-off').classList.remove('active');
+                
+                if (this.faucetDirection > 0.5) {
+                    document.getElementById('faucet-source').classList.add('active');
+                } else if (this.faucetDirection < -0.5) {
+                    document.getElementById('faucet-sink').classList.add('active');
+                } else {
+                    document.getElementById('faucet-off').classList.add('active');
+                }
+            }
+            
+            updateVisualizationButtons() {
+                document.getElementById('show-vectors').classList.toggle('active', this.showVectors);
+                document.getElementById('show-cube').classList.toggle('active', this.showCube);
+                document.getElementById('show-flowlines').classList.toggle('active', this.showFlowlines);
+            }
+            
+            render() {
+                this.scene.clear();
+                this.scene.drawGrid(8, 3);
+                this.scene.drawAxes();
+                
+                // 绘制测量立方体
+                if (this.showCube) {
+                    this.drawCube();
+                }
+                
+                // 绘制水流
+                if (this.showVectors) {
+                    this.drawFlow();
+                }
+                
+                // 绘制流线（如果启用）
+                if (this.showFlowlines) {
+                    this.drawFlowlines();
+                }
+                
+                // 计算并显示散度
+                this.calculateAndDisplayDivergence();
+            }
+            
+            drawCube() {
+                const size = this.cubeSize;
+                const half = size / 2;
+                
+                // 立方体的8个顶点
+                const vertices = [
+                    new Point3D(-half, -half, -half),
+                    new Point3D(half, -half, -half),
+                    new Point3D(half, half, -half),
+                    new Point3D(-half, half, -half),
+                    new Point3D(-half, -half, half),
+                    new Point3D(half, -half, half),
+                    new Point3D(half, half, half),
+                    new Point3D(-half, half, half)
+                ];
+                
+                // 绘制12条边
+                const edges = [
+                    [0,1], [1,2], [2,3], [3,0], // 前面
+                    [4,5], [5,6], [6,7], [7,4], // 后面
+                    [0,4], [1,5], [2,6], [3,7]  // 连接线
+                ];
+                
+                edges.forEach(edge => {
+                    this.scene.drawLine(
+                        vertices[edge[0]],
+                        vertices[edge[1]],
+                        '#ff9800',
+                        2
+                    );
+                });
+            }
+            
+            drawFlow() {
+                const center = new Point3D(0, 0, 0);
+                const strength = this.faucetStrength;
+                const direction = this.faucetDirection;
+                
+                // 绘制中心点（水龙头）
+                const centerProj = this.scene.projectPoint(center);
+                if (centerProj.scale > 0) {
+                    this.scene.ctx.beginPath();
+                    this.scene.ctx.arc(centerProj.x, centerProj.y, 10, 0, Math.PI * 2);
+                    this.scene.ctx.fillStyle = direction > 0 ? '#f44336' : '#4caf50';
+                    this.scene.ctx.fill();
+                    
+                    // 绘制中心点标签
+                    this.scene.ctx.fillStyle = '#ffffff';
+                    this.scene.ctx.font = 'bold 14px Arial';
+                    this.scene.ctx.textAlign = 'center';
+                    this.scene.ctx.fillText(direction > 0 ? '源' : '汇', centerProj.x, centerProj.y - 15);
+                }
+                
+                // 绘制从中心发出的箭头
+                const numArrows = 20;
+                for (let i = 0; i < numArrows; i++) {
+                    // 球面均匀分布
+                    const phi = Math.acos(1 - 2 * i / numArrows);
+                    const theta = Math.PI * (1 + Math.sqrt(5)) * i; // 黄金角
+                    
+                    // 球面坐标转直角坐标
+                    const x = Math.sin(phi) * Math.cos(theta);
+                    const y = Math.sin(phi) * Math.sin(theta);
+                    const z = Math.cos(phi);
+                    
+                    // 箭头长度与强度相关
+                    const arrowLength = strength * 3;
+                    
+                    let start, end;
+                    
+                    if (direction > 0) {
+                        // 源：箭头从中心指向外
+                        start = center;
+                        end = new Point3D(
+                            center.x + x * arrowLength * direction,
+                            center.y + y * arrowLength * direction,
+                            center.z + z * arrowLength * direction
+                        );
+                    } else if (direction < 0) {
+                        // 汇：箭头从外指向中心
+                        const distance = 5; // 箭头起点距离中心的距离
+                        start = new Point3D(
+                            center.x + x * distance,
+                            center.y + y * distance,
+                            center.z + z * distance
+                        );
+                        end = center; // 箭头指向中心
+                    } else {
+                        // 方向为0，不绘制箭头
+                        continue;
+                    }
+                    
+                    // 绘制箭头
+                    this.scene.drawArrow(start, end, '#2196f3', 2, 10);
+                }
+            }
+            
+            drawFlowlines() {
+                const center = new Point3D(0, 0, 0);
+                const strength = this.faucetStrength;
+                const direction = this.faucetDirection;
+                
+                // 绘制流线（连续曲线）
+                const numLines = 8;
+                for (let i = 0; i < numLines; i++) {
+                    const angle = (i * 2 * Math.PI) / numLines;
+                    const radius = 5;
+                    
+                    if (direction > 0) {
+                        // 源：从中心向外辐射的流线
+                        const start = center;
+                        const end = new Point3D(
+                            Math.cos(angle) * radius * direction,
+                            Math.sin(angle) * radius * direction,
+                            0
+                        );
+                        
+                        // 绘制流线
+                        this.scene.drawArrow(start, end, '#9c27b0', 1.5, 6);
+                    } else if (direction < 0) {
+                        // 汇：向中心汇聚的流线
+                        const start = new Point3D(
+                            Math.cos(angle) * radius,
+                            Math.sin(angle) * radius,
+                            0
+                        );
+                        const end = center;
+                        
+                        // 绘制流线
+                        this.scene.drawArrow(start, end, '#9c27b0', 1.5, 6);
+                    }
+                }
+            }
+            
+            calculateAndDisplayDivergence() {
+                // 散度 = 流出总量 / 体积
+                // 对于点源/汇，流出总量 = 强度 × 方向 × 球面面积因子
+                const outflow = this.faucetStrength * this.faucetDirection * 4 * Math.PI;
+                const volume = this.cubeSize * this.cubeSize * this.cubeSize;
+                const divergence = outflow / volume;
+                
+                // 更新显示
+                const divergenceValueElement = document.getElementById('divergence-value');
+                divergenceValueElement.textContent = Math.abs(divergence).toFixed(2);
+                
+                const outflowValueElement = document.getElementById('outflow-value');
+                outflowValueElement.textContent = Math.abs(outflow).toFixed(2);
+                
+                // 根据散度正负设置颜色和单位
+                const divergenceUnitElement = document.getElementById('divergence-unit');
+                if (divergence > 0.01) {
+                    divergenceValueElement.style.color = '#f44336';
+                    divergenceUnitElement.textContent = '单位/立方米 (源)';
+                } else if (divergence < -0.01) {
+                    divergenceValueElement.style.color = '#4caf50';
+                    divergenceUnitElement.textContent = '单位/立方米 (汇)';
+                } else {
+                    divergenceValueElement.style.color = '#00d4ff';
+                    divergenceUnitElement.textContent = '单位/立方米 (平衡)';
+                }
+            }
+        }
+        
+        // ================ 旋度场景（已修改） ================
+        
+        class CurlScene {
+            constructor() {
+                this.scene = new Scene3D('curl-canvas');
+                this.vortexStrength = 1.0;
+                this.vortexRadius = 3.0;
+                this.vortexDirection = 1.0; // 1: 逆时针，-1: 顺时针
+                this.pinwheelSize = 1.0;
+                this.pinwheelPosition = 0.0; // -1: 左，0: 中心，1: 右
+                this.pinwheelRotation = 0;
+                
+                // 设置渲染回调
+                this.scene.setRenderCallback(() => this.render());
+                
+                // 初始渲染
+                this.render();
+                
+                // 设置控制事件
+                this.setupControls();
+                
+                // 动画循环
+                this.animate();
+            }
+            
+            setupControls() {
+                // 漩涡强度
+                document.getElementById('vortex-strength').addEventListener('input', (e) => {
+                    this.vortexStrength = parseFloat(e.target.value);
+                    document.getElementById('vortex-strength-value').textContent = this.vortexStrength.toFixed(1);
+                    this.render();
+                });
+                
+                // 漩涡半径
+                document.getElementById('vortex-radius').addEventListener('input', (e) => {
+                    this.vortexRadius = parseFloat(e.target.value);
+                    document.getElementById('vortex-radius-value').textContent = this.vortexRadius.toFixed(1);
+                    document.getElementById('vortex-radius-display').textContent = this.vortexRadius.toFixed(2);
+                    this.render();
+                });
+                
+                // 漩涡方向
+                document.getElementById('vortex-direction').addEventListener('input', (e) => {
+                    this.vortexDirection = parseFloat(e.target.value);
+                    document.getElementById('vortex-direction-value').textContent = this.vortexDirection.toFixed(1);
+                    this.updateVortexButtons();
+                    this.render();
+                });
+                
+                // 漩涡预设
+                document.getElementById('vortex-clockwise').addEventListener('click', () => {
+                    this.vortexDirection = -1.0;
+                    document.getElementById('vortex-direction').value = -1.0;
+                    document.getElementById('vortex-direction-value').textContent = '-1.0';
+                    this.updateVortexButtons();
+                    this.render();
+                });
+                
+                document.getElementById('vortex-counterclockwise').addEventListener('click', () => {
+                    this.vortexDirection = 1.0;
+                    document.getElementById('vortex-direction').value = 1.0;
+                    document.getElementById('vortex-direction-value').textContent = '1.0';
+                    this.updateVortexButtons();
+                    this.render();
+                });
+                
+                document.getElementById('vortex-vertical').addEventListener('click', () => {
+                    this.vortexDirection = 0;
+                    document.getElementById('vortex-direction').value = 0;
+                    document.getElementById('vortex-direction-value').textContent = '0.0';
+                    this.updateVortexButtons();
+                    this.render();
+                });
+                
+                // 风车大小
+                document.getElementById('pinwheel-size').addEventListener('input', (e) => {
+                    this.pinwheelSize = parseFloat(e.target.value);
+                    document.getElementById('pinwheel-size-value').textContent = this.pinwheelSize.toFixed(1);
+                    this.render();
+                });
+                
+                // 风车位置
+                document.getElementById('pinwheel-position').addEventListener('input', (e) => {
+                    this.pinwheelPosition = parseFloat(e.target.value);
+                    document.getElementById('pinwheel-position-value').textContent = this.pinwheelPosition.toFixed(1);
+                    this.updatePinwheelButtons();
+                    this.render();
+                });
+                
+                // 风车预设位置
+                document.getElementById('pinwheel-center').addEventListener('click', () => {
+                    this.pinwheelPosition = 0.0;
+                    document.getElementById('pinwheel-position').value = 0.0;
+                    document.getElementById('pinwheel-position-value').textContent = '0.0';
+                    this.updatePinwheelButtons();
+                    this.render();
+                });
+                
+                document.getElementById('pinwheel-edge').addEventListener('click', () => {
+                    this.pinwheelPosition = 1.0;
+                    document.getElementById('pinwheel-position').value = 1.0;
+                    document.getElementById('pinwheel-position-value').textContent = '1.0';
+                    this.updatePinwheelButtons();
+                    this.render();
+                });
+                
+                document.getElementById('pinwheel-outside').addEventListener('click', () => {
+                    this.pinwheelPosition = 1.5;
+                    document.getElementById('pinwheel-position').value = 1.5;
+                    document.getElementById('pinwheel-position-value').textContent = '1.5';
+                    this.updatePinwheelButtons();
+                    this.render();
+                });
+            }
+            
+            updateVortexButtons() {
+                document.getElementById('vortex-clockwise').classList.remove('active');
+                document.getElementById('vortex-counterclockwise').classList.remove('active');
+                document.getElementById('vortex-vertical').classList.remove('active');
+                
+                if (this.vortexDirection > 0.5) {
+                    document.getElementById('vortex-counterclockwise').classList.add('active');
+                } else if (this.vortexDirection < -0.5) {
+                    document.getElementById('vortex-clockwise').classList.add('active');
+                } else {
+                    document.getElementById('vortex-vertical').classList.add('active');
+                }
+            }
+            
+            updatePinwheelButtons() {
+                document.getElementById('pinwheel-center').classList.remove('active');
+                document.getElementById('pinwheel-edge').classList.remove('active');
+                document.getElementById('pinwheel-outside').classList.remove('active');
+                
+                if (Math.abs(this.pinwheelPosition) < 0.3) {
+                    document.getElementById('pinwheel-center').classList.add('active');
+                } else if (Math.abs(this.pinwheelPosition) < 1.2) {
+                    document.getElementById('pinwheel-edge').classList.add('active');
+                } else {
+                    document.getElementById('pinwheel-outside').classList.add('active');
+                }
+            }
+            
+            render() {
+                this.scene.clear();
+                this.scene.drawGrid(8, 3);
+                this.scene.drawAxes();
+                
+                // 绘制漩涡
+                this.drawVortex();
+                
+                // 绘制测量风车
+                this.drawPinwheel();
+                
+                // 计算并显示旋度
+                this.calculateAndDisplayCurl();
+            }
+            
+            drawVortex() {
+                const center = new Point3D(0, 0, 0);
+                const radius = this.vortexRadius;
+                const strength = this.vortexStrength;
+                const direction = this.vortexDirection;
+                
+                // 绘制漩涡中心
+                const centerProj = this.scene.projectPoint(center);
+                if (centerProj.scale > 0) {
+                    this.scene.ctx.beginPath();
+                    this.scene.ctx.arc(centerProj.x, centerProj.y, 12, 0, Math.PI * 2);
+                    this.scene.ctx.fillStyle = '#9c27b0';
+                    this.scene.ctx.fill();
+                    
+                    // 绘制中心点标签
+                    this.scene.ctx.fillStyle = '#ffffff';
+                    this.scene.ctx.font = 'bold 14px Arial';
+                    this.scene.ctx.textAlign = 'center';
+                    this.scene.ctx.fillText('漩涡中心', centerProj.x, centerProj.y - 20);
+                }
+                
+                // 绘制漩涡流线
+                const numLayers = 3;
+                for (let layer = 0; layer < numLayers; layer++) {
+                    const layerRadius = radius * (0.3 + layer * 0.35);
+                    const numStreams = 8 + layer * 4;
+                    
+                    for (let i = 0; i < numStreams; i++) {
+                        const angle = (i * 2 * Math.PI) / numStreams;
+                        const segmentAngle = -direction * 0.8; // 修正方向显示，使控制面板与视图一致
+                        
+                        // 流线起点
+                        const start = new Point3D(
+                            layerRadius * Math.cos(angle),
+                            layerRadius * Math.sin(angle),
+                            0
+                        );
+                        
+                        // 流线终点
+                        const endAngle = angle + segmentAngle;
+                        const end = new Point3D(
+                            layerRadius * Math.cos(endAngle),
+                            layerRadius * Math.sin(endAngle),
+                            0
+                        );
+                        
+                        // 根据层数设置不同的透明度
+                        const alpha = 0.3 + layer * 0.2;
+                        const color = `rgba(33, 150, 243, ${alpha})`;
+                        
+                        this.scene.drawArrow(start, end, color, 2, 8);
+                    }
+                }
+                
+                // 绘制漩涡边界
+                const numPoints = 48;
+                const points = [];
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = (i * 2 * Math.PI) / numPoints;
+                    points.push(new Point3D(
+                        radius * Math.cos(angle),
+                        radius * Math.sin(angle),
+                        0
+                    ));
+                }
+                
+                for (let i = 0; i < numPoints; i++) {
+                    this.scene.drawLine(
+                        points[i],
+                        points[(i+1) % numPoints],
+                        'rgba(156, 39, 176, 0.6)',
+                        2
+                    );
+                }
+            }
+            
+            drawPinwheel() {
+                const size = this.pinwheelSize * 0.5;
+                const position = this.pinwheelPosition * this.vortexRadius;
+                const center = new Point3D(position, 0, 0);
+                
+                // 绘制风车中心
+                const centerProj = this.scene.projectPoint(center);
+                if (centerProj.scale > 0) {
+                    this.scene.ctx.beginPath();
+                    this.scene.ctx.arc(centerProj.x, centerProj.y, 8, 0, Math.PI * 2);
+                    this.scene.ctx.fillStyle = '#ff9800';
+                    this.scene.ctx.fill();
+                    
+                    // 绘制风车标签
+                    this.scene.ctx.fillStyle = '#ffffff';
+                    this.scene.ctx.font = 'bold 12px Arial';
+                    this.scene.ctx.textAlign = 'center';
+                    this.scene.ctx.fillText('测量风车', centerProj.x, centerProj.y - 15);
+                }
+                
+                // 绘制风车叶片
+                const numBlades = 4;
+                for (let i = 0; i < numBlades; i++) {
+                    const angle = this.pinwheelRotation + (i * 2 * Math.PI) / numBlades;
+                    
+                    const end = new Point3D(
+                        center.x + Math.cos(angle) * size,
+                        center.y + Math.sin(angle) * size,
+                        center.z
+                    );
+                    
+                    this.scene.drawLine(center, end, '#ff9800', 3);
+                    
+                    // 绘制叶片箭头
+                    const tip = new Point3D(
+                        center.x + Math.cos(angle) * size * 1.3,
+                        center.y + Math.sin(angle) * size * 1.3,
+                        center.z
+                    );
+                    
+                    this.scene.drawArrow(end, tip, '#ff9800', 2, 8);
+                }
+            }
+            
+            calculateAndDisplayCurl() {
+                // 旋度 = 角速度 × 位置因子 × 半径因子
+                const angularVelocity = this.vortexStrength * this.vortexDirection;
+                
+                // 位置因子：中心最大，边缘减小，外部接近零
+                let positionFactor;
+                const absPos = Math.abs(this.pinwheelPosition);
+                if (absPos < 0.5) {
+                    positionFactor = 1.0;
+                } else if (absPos < 1.0) {
+                    positionFactor = 1.0 - (absPos - 0.5) * 2;
+                } else {
+                    positionFactor = 0.1;
+                }
+                
+                // 半径因子：半径越大，旋度值越小（使用反比关系）
+                // 当半径=1时因子为1，半径=5时因子为0.2
+                const radiusFactor = 1.0 / (this.vortexRadius);
+                
+                const curl = angularVelocity * positionFactor * radiusFactor;
+                
+                // 旋转速度（用于动画）
+                const rotationSpeed = angularVelocity * positionFactor * radiusFactor * 3;
+                
+                // 更新显示
+                const curlValueElement = document.getElementById('curl-value');
+                curlValueElement.textContent = Math.abs(curl).toFixed(2);
+                
+                const rotationSpeedElement = document.getElementById('rotation-speed-value');
+                rotationSpeedElement.textContent = Math.abs(rotationSpeed).toFixed(2);
+                
+                // 根据旋度正负设置颜色和单位
+                const curlUnitElement = document.getElementById('curl-unit');
+                if (curl > 0.01) {
+                    curlValueElement.style.color = '#4caf50';
+                    curlUnitElement.textContent = '单位/米 (逆时针)';
+                } else if (curl < -0.01) {
+                    curlValueElement.style.color = '#f44336';
+                    curlUnitElement.textContent = '单位/米 (顺时针)';
+                } else {
+                    curlValueElement.style.color = '#00d4ff';
+                    curlUnitElement.textContent = '单位/米 (无旋转)';
+                }
+                
+                return rotationSpeed;
+            }
+            
+            animate() {
+                // 更新风车旋转
+                const rotationSpeed = this.calculateAndDisplayCurl();
+                this.pinwheelRotation += rotationSpeed * 0.05;
+                
+                // 重新渲染
+                this.render();
+                
+                // 继续动画循环
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        
+        // ================ 场景切换 ================
+        
+        let currentScene = 'flux';
+        let fluxScene, divergenceScene, curlScene;
+        
+        function initScenes() {
+            fluxScene = new FluxScene();
+            divergenceScene = new DivergenceScene();
+            curlScene = new CurlScene();
+        }
+        
+        function switchScene(sceneName) {
+            // 更新场景按钮状态
+            document.querySelectorAll('.scene-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(`scene-${sceneName}`).classList.add('active');
+            
+            // 更新场景容器显示
+            document.querySelectorAll('.scene-container').forEach(container => {
+                container.classList.remove('active');
+            });
+            
+            document.getElementById(`${sceneName}-scene`).classList.add('active');
+            
+            currentScene = sceneName;
+        }
+        
+        // ================ 初始化 ================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化场景
+            initScenes();
+            
+            // 设置场景切换事件
+            document.getElementById('scene-flux').addEventListener('click', () => switchScene('flux'));
+            document.getElementById('scene-divergence').addEventListener('click', () => switchScene('divergence'));
+            document.getElementById('scene-curl').addEventListener('click', () => switchScene('curl'));
+        });
+    </script>
+</body>
+</html>
